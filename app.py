@@ -37,18 +37,10 @@ def upscale_photo(path_1, path_2):
     upscale(path_1, path_2)
 
 
-def save_photo(self, field):
-    image = request.files.get(field)
-    extension = image.filename.split('.')[-1]
-    path = os.path.join('files', f'{uuid.uuid4()}.{extension}')
-    image.save(path)
-    return path
-
-
 class UpscaleView(MethodView):
 
     def post(self):
-        photo_pathes = [self.save_photo(field) for field in ('image_1', 'image_2')]
+        photo_pathes = [self.save_photo(field) for field in ('photo_1', 'photo_2')]
         task = upscale_photo.delay(*photo_pathes)
         return jsonify(
             {'task_id': task.id}
@@ -67,9 +59,17 @@ class UpscaleView(MethodView):
         return path
 
 
-comparison_view = UpscaleView.as_view('upscale')
-app.add_url_rule('/tasks/<string:task_id>', view_func=comparison_view, methods=['GET'])
-app.add_url_rule('/upscale', view_func=comparison_view, methods=['POST'])
+class ProcessedView(MethodView):
+    def post(self):
+        pass
+
+
+upscale_view = UpscaleView.as_view('upscale')
+processed_view = ProcessedView.as_view('processed')
+
+app.add_url_rule('/tasks/<string:task_id>', view_func=upscale_view, methods=['GET'])
+app.add_url_rule('/upscale', view_func=upscale_view, methods=['POST'])
+app.add_url_rule('/processed/{file}', view_func=processed_view, methods=['POST'])
 
 if __name__ == '__main__':
     app.run()
