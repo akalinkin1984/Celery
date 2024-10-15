@@ -7,7 +7,7 @@ from flask import request, jsonify
 from celery import Celery
 from celery.result import AsyncResult
 
-# from upscale.upscale import upscale
+from upscale.upscale import upscale
 
 
 app = flask.Flask('app')
@@ -32,9 +32,9 @@ class ContextTask(celery_app.Task):
 celery_app.Task = ContextTask
 
 
-# @celery_app.task()
-# def upscale_photo(path_1, path_2):
-#     upscale(path_1, path_2)
+@celery_app.task()
+def upscale_photo(path_1, path_2):
+    upscale(path_1, path_2)
 
 
 def save_photo(self, field):
@@ -47,12 +47,12 @@ def save_photo(self, field):
 
 class UpscaleView(MethodView):
 
-    # def post(self):
-    #     photo_pathes = [self.save_photo(field) for field in ('image_1', 'image_2')]
-    #     task = upscale_photo.delay(*photo_pathes)
-    #     return jsonify(
-    #         {'task_id': task.id}
-    #     )
+    def post(self):
+        photo_pathes = [self.save_photo(field) for field in ('image_1', 'image_2')]
+        task = upscale_photo.delay(*photo_pathes)
+        return jsonify(
+            {'task_id': task.id}
+        )
 
     def get(self, task_id):
         task = AsyncResult(task_id, app=celery_app)
