@@ -1,25 +1,26 @@
-import os
 import time
 
 import requests
 
 
 resp = requests.post('http://127.0.0.1:5000/upscale', files={
-    'file': open('upscale/lama_300px.png', 'rb')
+    'file': open('upscale\\lama_300px.png', 'rb')
 })
 
 resp_data = resp.json()
-print(resp_data)
 task_id = resp_data.get('task_id')
+print(resp_data)
 print(task_id)
 
 
 status = None
 
-while status != 'SUCCESS':
+while status not in ('SUCCESS', 'FAILURE'):
     resp = requests.get(f'http://127.0.0.1:5000/tasks/{task_id}')
     print(resp.json())
+    status = resp.json().get('status')
     time.sleep(3)
 
-# resp = requests.get(f'http://127.0.0.1:5000/tasks/{task_id}')
-# print(resp.json())
+resp = requests.get('http://127.0.0.1:5000/processed/result_image.png')
+binary_fail = resp.content
+print(resp.status_code)

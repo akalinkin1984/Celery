@@ -2,7 +2,7 @@ import cv2
 from cv2 import dnn_superres
 
 
-def upscale(input_path: str, output_path: str, model_path: str = 'EDSR_x2.pb') -> None:
+def upscale(input_path: str, output_path: str, model_path: str = 'upscale\\EDSR_x2.pb') -> None:
     """
     :param input_path: путь к изображению для апскейла
     :param output_path:  путь к выходному файлу

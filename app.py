@@ -1,5 +1,4 @@
 import os
-import uuid
 
 import flask
 from flask.views import MethodView
@@ -11,8 +10,8 @@ from upscale.upscale import upscale
 
 
 app = flask.Flask('app')
-app.config['UPLOAD_FOLDER'] = 'photos'
-celery_app = Celery(
+app.config['UPLOAD_FOLDER'] = 'result'
+celery = Celery(
     'app',
     backend='redis://localhost:6379/0',
     broker='redis://localhost:6379/1',
@@ -20,56 +19,51 @@ celery_app = Celery(
     broker_connection_retry_on_startup=True
 )
 
-celery_app.conf.update(app.config)
+celery.conf.update(app.config)
 
 
-class ContextTask(celery_app.Task):
+class ContextTask(celery.Task):
     def __call__(self, *args, **kwargs):
         with app.app_context():
             return self.run(*args, **kwargs)
 
 
-celery_app.Task = ContextTask
+celery.Task = ContextTask
 
 
-@celery_app.task()
-def upscale_photo(path_1, path_2):
+@celery.task()
+def upscale_file(path_1, path_2):
     upscale(path_1, path_2)
 
 
 class UpscaleView(MethodView):
 
     def post(self):
-        file, result_file = self.save_photo()
-        task = upscale_photo.delay(file, result_file)
-        return jsonify(
-            {'task_id': task.id}
-        )
+        origin_file_path, result_file_path = self.save_file()
+        task = upscale_file.delay(origin_file_path, result_file_path)
+        return jsonify({'task_id': task.id})
 
 
     def get(self, task_id):
-        task = AsyncResult(task_id, app=celery_app)
+        task = AsyncResult(task_id, app=celery)
         if task.status != 'SUCCESS':
             return jsonify({'status': task.status})
         return jsonify({'status': task.status,
-                        'link': f'http://127.0.0.1:5000/processed/{request.json["p"]}',
+                        'link': f'http://127.0.0.1:5000/processed/result_image.png'
                         })
 
-    def save_photo(self):
+    def save_file(self):
         image = request.files.get('file')
-        name, extension = image.filename.split('.')
-        file = os.path.join('photos', f'{name}.{extension}')
-        result_file = os.path.join('photos', f'{name}_upscale.{extension}')
-        image.save(file)
-        image.save(result_file)
-        return file, result_file
-
-
+        extension = image.filename.split('.')[-1]
+        origin_file_path = os.path.join('upscale', image.filename)
+        result_file_path = os.path.join('result', f'result_image.{extension}')
+        image.save(result_file_path)
+        return origin_file_path, result_file_path
 
 
 class ProcessedView(MethodView):
-    def get(self):
-        send_file('upscale/result.png')
+    def get(self, file_name):
+        return send_file(f'result\\{file_name}')
 
 
 upscale_view = UpscaleView.as_view('upscale')
@@ -77,7 +71,7 @@ processed_view = ProcessedView.as_view('processed')
 
 app.add_url_rule('/upscale', view_func=upscale_view, methods=['POST'])
 app.add_url_rule('/tasks/<string:task_id>', view_func=upscale_view, methods=['GET'])
-app.add_url_rule('/processed/<string:file>', view_func=processed_view, methods=['GET'])
+app.add_url_rule('/processed/<string:file_name>', view_func=processed_view, methods=['GET'])
 
 if __name__ == '__main__':
     app.run()
