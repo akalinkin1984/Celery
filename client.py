@@ -4,7 +4,7 @@ import requests
 
 
 resp = requests.post('http://127.0.0.1:5000/upscale', files={
-    'file': open('lama_300px.png', 'rb')
+    'file': 'images\\lama_300px.png'
 })
 
 resp_data = resp.json()
@@ -22,5 +22,5 @@ while status not in ('SUCCESS', 'FAILURE'):
     time.sleep(3)
 
 resp = requests.get('http://127.0.0.1:5000/processed/result_image.png')
-binary_fail = resp.content
+binary_file = resp.content
 print(resp.status_code)
