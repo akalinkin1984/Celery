@@ -4,7 +4,7 @@ import requests
 
 
 resp = requests.post('http://127.0.0.1:5000/upscale', files={
-    'file': open('upscale\\lama_300px.png', 'rb')
+    'file': open('lama_300px.png', 'rb')
 })
 
 resp_data = resp.json()

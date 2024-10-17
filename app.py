@@ -3,21 +3,22 @@ import os
 import flask
 from flask.views import MethodView
 from flask import request, jsonify, send_file
-from celery import Celery
+# from celery import Celery
 from celery.result import AsyncResult
 
-from upscale.upscale import upscale
+from celery_app import celery, upscale
+# from upscale.upscale import upscale
 
 
 app = flask.Flask('app')
 app.config['UPLOAD_FOLDER'] = 'result'
-celery = Celery(
-    'app',
-    backend='redis://localhost:6379/0',
-    broker='redis://localhost:6379/1',
-    broker_connection_retry=True,
-    broker_connection_retry_on_startup=True
-)
+# celery = Celery(
+#     'app',
+#     backend='redis://localhost:6379/0',
+#     broker='redis://localhost:6379/1',
+#     broker_connection_retry=True,
+#     broker_connection_retry_on_startup=True
+# )
 
 celery.conf.update(app.config)
 
@@ -31,16 +32,16 @@ class ContextTask(celery.Task):
 celery.Task = ContextTask
 
 
-@celery.task()
-def upscale_file(path_1, path_2):
-    upscale(path_1, path_2)
+# @celery.task()
+# def upscale_file(path_1, path_2):
+#     upscale(path_1, path_2)
 
 
 class UpscaleView(MethodView):
 
     def post(self):
         origin_file_path, result_file_path = self.save_file()
-        task = upscale_file.delay(origin_file_path, result_file_path)
+        task = upscale.delay(origin_file_path, result_file_path)
         return jsonify({'task_id': task.id})
 
 
@@ -55,7 +56,8 @@ class UpscaleView(MethodView):
     def save_file(self):
         image = request.files.get('file')
         extension = image.filename.split('.')[-1]
-        origin_file_path = os.path.join('upscale', image.filename)
+        # origin_file_path = os.path.join('upscale', image.filename)
+        origin_file_path = image
         result_file_path = os.path.join('result', f'result_image.{extension}')
         image.save(result_file_path)
         return origin_file_path, result_file_path
